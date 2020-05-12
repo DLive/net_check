@@ -1,0 +1,6 @@
+-sname net_check
+
+-setcookie net_check_cookie
+
++K true
++A30
