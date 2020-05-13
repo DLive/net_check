@@ -94,13 +94,13 @@ handle_info({tcp, Socket, Data}, State = #state{socket=Socket, transport=Transpo
   end,
   {noreply, State,?TIMEOUT};
 handle_info({tcp_closed, _Socket}, State = #state{}) ->
-  logger:error("tcp_closed"),
+  logger:error("server tcp_closed",#{domain => net_server}),
   {stop, normal, State};
 handle_info({tcp_error, _, Reason}, State = #state{}) ->
   {noreply, State,?TIMEOUT};
 
 handle_info(timeout, State = #state{}) ->
-  logger:error("more than 5 sencond not receive heartbeat"),
+  logger:error("more than 5 sencond not receive heartbeat",[],#{domain => net_server}),
   {noreply, State,?TIMEOUT};
 handle_info(_Info, State = #state{}) ->
   {noreply, State}.
@@ -132,10 +132,10 @@ check_net_state(#net_health_info{id=ID, send_time = SendTime} = NetInfo)->
   Now = net_timer_util:timestamp(),
   Cost = Now - SendTime,
   if
-    Cost > 100 ->
-      logger:error("[ReciveHeartbeat] id:~p cost:~p send:~p arrive:~p",[ID,Cost,SendTime,Now]);
+    Cost > 10 ->
+      logger:error("[ReciveHeartbeat] id:~p cost:~p send:~p arrive:~p",[ID,Cost,SendTime,Now],#{domain => net_server});
     true ->
-      logger:info("[ReciveHeartbeat] id:~p cost:~p send:~p arrive:~p",[ID,Cost,SendTime,Now])
+      logger:info("[ReciveHeartbeat] id:~p cost:~p send:~p arrive:~p",[ID,Cost,SendTime,Now],#{domain => net_server})
   end,
 
   NetInfo2 = NetInfo#net_health_info{back_send_time = net_timer_util:timestamp()},

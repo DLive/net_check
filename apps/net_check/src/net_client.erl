@@ -57,7 +57,7 @@ handle_info(heartbeat, State = #state{socket = Socket, heart_list = HeartList}) 
             erlang:send_after(?HEARTBEAT_TIME, self(), heartbeat),
             {noreply, State#state{heart_list = [HeartIndex] ++ HeartList}};
         {error, Reason} ->
-            logger:error("send heartbeat error Reason ~p, will close and reopen", [Reason]),
+            logger:error("send heartbeat error Reason ~p, will close and reopen", [Reason],#{domain => net_client}),
             print_lost_heartbeat(HeartList),
             gen_tcp:close(Socket),
             erlang:send_after(1000, self(), reconnection),
@@ -75,7 +75,7 @@ handle_info({tcp_closed,_}, State = #state{}) ->
     erlang:send_after(1000, self(), reconnection),
     {noreply, State#state{socket = undefined}};
 handle_info(Info, State = #state{}) ->
-    logger:error("client get unkonw handle message ~p",[Info]),
+    logger:error("client get unkonw handle message ~p",[Info],#{domain => net_client}),
     {noreply, State}.
 
 terminate(_Reason, _State = #state{}) ->
@@ -98,15 +98,15 @@ connect_server(Host, Port) ->
     ],
     try gen_tcp:connect(Host, Port, Options, 2000) of
         {ok, Socket} ->
-            logger:info("connection to server success"),
+            logger:info("connection to server success",#{domain => net_client}),
             erlang:send_after(?HEARTBEAT_TIME, self(), heartbeat),
             {ok, Socket};
         UnKnow ->
-            logger:error("connect to server ~p:~p return msg ~p", [Host, Port, UnKnow]),
+            logger:error("connect to server ~p:~p return msg ~p", [Host, Port, UnKnow],#{domain => net_client}),
             {error, UnKnow}
     catch
         _Type:Reason:_ ->
-            logger:error("connect to server ~p:~p error ~p", [Host, Port, Reason]),
+            logger:error("connect to server ~p:~p error ~p", [Host, Port, Reason],#{domain => net_client}),
             {error, Reason}
     end.
 
@@ -116,7 +116,7 @@ do_heartbeat(Socket) ->
     HeartBeat = term_to_binary(#net_health_info{id = Index, send_time = SendTime}),
     case gen_tcp:send(Socket, HeartBeat) of
         ok ->
-            logger:info("[heartbeat] id:~p send_time:~p", [Index, SendTime]),
+            logger:info("[heartbeat] id:~p send_time:~p", [Index, SendTime],#{domain => net_client}),
             {ok, Index};
         {error, Reason} ->
             {error, Reason}
@@ -124,7 +124,7 @@ do_heartbeat(Socket) ->
 print_lost_heartbeat([]) ->
     ok;
 print_lost_heartbeat([Item | HeartList]) ->
-    logger:error("[heartbeat_back_lost] ~p", [Item]),
+    logger:error("[heartbeat_back_lost] ~p", [Item],#{domain => net_client}),
     print_lost_heartbeat(HeartList).
 
 check_net_state(#net_health_info{id = ID, send_time = SendTime, back_send_time = BackSendTime} = NetInfo) ->
@@ -132,21 +132,21 @@ check_net_state(#net_health_info{id = ID, send_time = SendTime, back_send_time =
     Cost = Now - SendTime,
     BackCost = Now - BackSendTime,
     if
-        Cost > 100 ->
-            logger:error("[HeartbeatBack] id:~p cost:~p backcost:~p send:~p arrive:~p", [ID, Cost, BackCost, SendTime, Now]);
+        Cost > 15 ->
+            logger:error("[HeartbeatBack] id:~p cost:~p backcost:~p send:~p arrive:~p", [ID, Cost, BackCost, SendTime, Now],#{domain => net_client});
         true ->
-            logger:info("[HeartbeatBack] id:~p cost:~p backcost:~p send:~p arrive:~p", [ID, Cost, BackCost, SendTime, Now])
+            logger:info("[HeartbeatBack] id:~p cost:~p backcost:~p send:~p arrive:~p", [ID, Cost, BackCost, SendTime, Now],#{domain => net_client})
     end,
     {ok, ID};
 
 check_net_state(NetInfo) ->
-    logger:error("check_net_state unkonw message ~p", [NetInfo]),
+    logger:error("check_net_state unkonw message ~p", [NetInfo],#{domain => net_client}),
     ok.
 
 checklist(HeartList) ->
     case length(HeartList) of
         Len when Len > 15 ->
-            logger:error("more then 15 heartbeat no back ~p", [HeartList]),
+            logger:error("more then 15 heartbeat no back ~p", [HeartList],#{domain => net_client}),
             false;
         _ ->
             true
