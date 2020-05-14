@@ -4,14 +4,12 @@
 %%% @doc
 %%%
 %%% @end
-%%% Created : 11. May 2020 20:11
+%%% Created : 14. May 2020 17:05
 %%%-------------------------------------------------------------------
--module(net_timer_util).
+-module(tool_test).
 -author("dlive").
 
-%% API
--export([timestamp/0]).
+-include_lib("eunit/include/eunit.hrl").
 
-timestamp()->
-  {M, S, Micro} = os:timestamp(),
-  M * 1000000000 + S*1000 + Micro div 1000.
+simple_test() ->
+    ?assert(true).
